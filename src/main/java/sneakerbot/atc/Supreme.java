@@ -16,6 +16,8 @@ import java.util.regex.Pattern;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.CookieSpecs;
@@ -24,6 +26,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
 import org.apache.http.message.BasicNameValuePair;
@@ -37,18 +40,35 @@ import main.java.sneakerbot.loaders.Proxy.ProxyObject;
 
 public class Supreme implements Runnable  {
 	
-	private String RELEASE_TIME = "Thu, 09 Nov 2017 16:00:00 GMT"; // change every release. Should be in config
-	private String keyword = "Robe";
+	private String RELEASE_TIME = "Fri, 24 Nov 2017 16:00:00 GMT"; // change every release. Should be in config
+	private String keyword = "Leather Bones Jacket";
 	
 	public Supreme(ProxyObject proxy, CredentialObject credentials, ConfigObject config) {
-		super();
+		super();	
 		
+		BasicCredentialsProvider proxyCredentials = null;
 		cookies = new BasicCookieStore();
 		final int timeout = 15000;
-		client = HttpClientBuilder.create().setDefaultCookieStore(cookies)
+		
+		if(proxy != null && proxy.getUsername() != null) {
+			proxyCredentials = new BasicCredentialsProvider();
+			proxyCredentials.setCredentials(
+					new AuthScope(proxy.getAddress(), proxy.getPort()),
+					new UsernamePasswordCredentials(proxy.getUsername(), proxy.getPassword()));			
+		}
+		
+		client = HttpClientBuilder.create()
+				.setDefaultCookieStore(cookies)
 				.setRoutePlanner(proxy != null ? new DefaultProxyRoutePlanner(new HttpHost(proxy.getAddress(), proxy.getPort())) : null)
 				.setConnectionReuseStrategy( (response, context) -> false )
-				.setDefaultRequestConfig(RequestConfig.custom().setCookieSpec(CookieSpecs.STANDARD).setConnectTimeout(timeout).setConnectionRequestTimeout(timeout).setSocketTimeout(timeout).build())
+				.setDefaultCredentialsProvider(proxyCredentials)
+				.setDefaultRequestConfig(RequestConfig.custom()
+						.setCookieSpec(CookieSpecs.STANDARD)
+						.setProxy(proxy != null ? new HttpHost(proxy.getAddress(), proxy.getPort()) : null)
+						.setConnectTimeout(timeout)
+						.setConnectionRequestTimeout(timeout)
+						.setSocketTimeout(timeout)
+						.build())
 				.build();
 		
 		this.proxy = proxy;
@@ -77,19 +97,44 @@ public class Supreme implements Runnable  {
 		
 		for(String variant : variants) {
 			tasks.add(() -> {
-				boolean carted = addToCart(productId, variant);
+				boolean carted = false;
+				
+				while(!carted && !Thread.interrupted())
+					carted = addToCart(productId, variant);
 				
 				if(carted) {
-					boolean checkedOut = checkout(variant);				
+					boolean checkout = false;
 					
-					if(checkedOut)
+					while(!checkout && !Thread.interrupted())
+						checkout = checkout(variant);		
+
+					if(checkout)
 						print("Successful checkout on item: " + productId + " Variant: " + variant);
 					else
 						print("Unsuccessful checkout on item: " + productId + " Variant: " + variant);					
-				}			
-				
+				}					
 			});
 		}
+		
+		tasks.add(() -> {		
+		    synchronized(this) {
+		    	if(Bot.captchas.size() >= 1) {
+		    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size())).getToken();
+		    		tokenGrabTime = System.currentTimeMillis();
+		    	}   	
+		    }
+
+		    while(!itemCarted && !Thread.interrupted()) {
+				if((System.currentTimeMillis() - tokenGrabTime) > 90000L && tokenGrabTime != 0L) { // grab new recaptcha token
+				    synchronized(this) {
+				    	if(Bot.captchas.size() >= 1) {
+				    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size())).getToken();
+				    		tokenGrabTime = System.currentTimeMillis();
+				    	}   
+				    }
+				}	    	
+		    }	    
+		});
 		
 		tasks.stream().forEach(t -> {
 			threads.add(new Thread(t));
@@ -130,7 +175,6 @@ public class Supreme implements Runnable  {
 		threads.stream().forEach(t -> { // stop threads if item checked out.
 			t.interrupt();
 		});	
-		
 	}
 	
 	public int getProductId(String keyword) {
@@ -266,7 +310,6 @@ public class Supreme implements Runnable  {
 		HttpPost request = new HttpPost("http://www.supremenewyork.com/shop/" + productId + "/add.json");
 		List<NameValuePair> data = new ArrayList<NameValuePair>();
 		HttpResponse response = null;
-		boolean success = false;
 		
 		request.setHeader("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 9_3_3 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Mobile/13G34");
 		request.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
@@ -280,62 +323,49 @@ public class Supreme implements Runnable  {
 		data.add(new BasicNameValuePair("style", variant));
 		data.add(new BasicNameValuePair("qty", "1"));
 		
-		while(!success && !Thread.interrupted()) { 
-			try {
-				request.setEntity(new UrlEncodedFormEntity(data));
-				response = client.execute(request);
+		try {
+			request.setEntity(new UrlEncodedFormEntity(data));
+			response = client.execute(request);
 			       
-				BufferedReader in = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-				StringBuffer result = new StringBuffer();
-				String line = "";
-				while ((line = in.readLine()) != null) 
-					result.append(line);
+			BufferedReader in = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+			StringBuffer result = new StringBuffer();
+			String line = "";
+			while ((line = in.readLine()) != null) 
+				result.append(line);
 				
-				in.close();
+			in.close();
 				
-				print(result.toString());
-				if(response.getStatusLine().getStatusCode() == 200 && !result.toString().equalsIgnoreCase("[]")) {
-					print("Product: " + productId + " Variant: " + variant + " added to cart.");
-					success = true;
-					return true;
-				} else 
-					print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
+			print(result.toString());
+			if(response.getStatusLine().getStatusCode() == 200 && !result.toString().equalsIgnoreCase("[]")) {
+				print("Product: " + productId + " Variant: " + variant + " added to cart.");
+				return true;
+			} else 
+				print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
 				
-				Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
-			} catch (Exception e ) {
-				if(DEBUG) 
-					e.printStackTrace();
-				else {
-					String name = e.getClass().getName();
+			Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
+		} catch (Exception e ) {
+			if(DEBUG) 
+				e.printStackTrace();
+			else {
+				String name = e.getClass().getName();
 					
-					if(!name.contains("SocketTimeoutException"))
-						print("[Exception - addToCart(productId, variant)] -> " + name);
-				}
-			} finally {
-				if(request != null)
-					request.releaseConnection();
-				try {
-					if(response != null && response.getEntity() != null)
-						EntityUtils.consume(response.getEntity());
-				} catch (Exception e) { e.printStackTrace(); }
+				if(!name.contains("SocketTimeoutException"))
+					print("[Exception - addToCart(productId, variant)] -> " + name);
 			}
-		}	
+		} finally {
+			if(request != null)
+				request.releaseConnection();
+			try {
+				if(response != null && response.getEntity() != null)
+					EntityUtils.consume(response.getEntity());
+			} catch (Exception e) { e.printStackTrace(); }
+		}
 		return false;
 	}
 	
 	public boolean checkout(String variant) {
 		HttpPost request = new HttpPost("https://www.supremenewyork.com/checkout.json");
 		HttpResponse response = null;
-		boolean success = false;
-		String token = "";
-		long tokenGrabTime = 0L;
-		
-	    synchronized(this) {
-	    	if(Bot.CAPTCHAS.size() >= 1) {
-	    		token = Bot.CAPTCHAS.remove(new Random().nextInt(Bot.CAPTCHAS.size()));
-	    		tokenGrabTime = System.currentTimeMillis();
-	    	}   	
-	    }
 		
 		request.setHeader("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 9_3_3 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Mobile/13G34");
 		request.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
@@ -345,67 +375,54 @@ public class Supreme implements Runnable  {
 		request.setHeader("Host", "www.supremenewyork.com");
 		request.setHeader("Upgrade-Insecure-Requests", "1");
 		
-		List<NameValuePair> data = generateCheckout(variant, token);
+		List<NameValuePair> data = generateCheckout(variant);
 		
-		while(!success && !Thread.interrupted()) { 
-			try {
+		try {
 				
-				if((System.currentTimeMillis() - tokenGrabTime) > 90000L  && tokenGrabTime != 0L) { // grab new recaptcha token
-				    synchronized(this) {
-				    	if(Bot.CAPTCHAS.size() >= 1) {
-				    		token = Bot.CAPTCHAS.remove(new Random().nextInt(Bot.CAPTCHAS.size()));
-				    		tokenGrabTime = System.currentTimeMillis();
-				    	}   
-				    	data = generateCheckout(variant, token);
-				    }
-				}
-				
-				request.setEntity(new UrlEncodedFormEntity(data));
-				response = client.execute(request);
+			request.setEntity(new UrlEncodedFormEntity(data));
+			response = client.execute(request);
 			       
-				BufferedReader in = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
-				StringBuffer result = new StringBuffer();
-				String line = "";
-				while ((line = in.readLine()) != null) 
-					result.append(line);
+			BufferedReader in = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+			StringBuffer result = new StringBuffer();
+			String line = "";
+			while ((line = in.readLine()) != null) 
+				result.append(line);
 				
-				in.close();
+			in.close();
 				
-				print(result.toString());
-				if(response.getStatusLine().getStatusCode() == 200) {
-					JSONObject checkoutJson = new JSONObject(result.toString());
-					if(!checkoutJson.getString("status").toLowerCase().equals("failed")) {
-						success = true;
-						itemCarted = true;
-						return true;
-					} else
-						print("Checkout status: " + checkoutJson.getString("status"));
-				} else 
-					print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
+			print(result.toString());
+			if(response.getStatusLine().getStatusCode() == 200) {
+				JSONObject checkoutJson = new JSONObject(result.toString());
+				if(!checkoutJson.getString("status").toLowerCase().equals("failed")) {
+					itemCarted = true;
+					return true;
+				} else
+					print("Checkout status: " + checkoutJson.getString("status"));
+			} else 
+				print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
 				
-				Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
-			} catch (Exception e ) {
-				if(DEBUG) 
-					e.printStackTrace();
-				else {
-					String name = e.getClass().getName();
+			Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
+		} catch (Exception e ) {
+			if(DEBUG) 
+				e.printStackTrace();
+			else {
+				String name = e.getClass().getName();
 					
-					if(!name.contains("SocketTimeoutException"))
-						print("[Exception - addToCart(productId, variant)] -> " + name);
-				}
-			} finally {
-				if(request != null)
-					request.releaseConnection();
-				try {
-					if(response != null && response.getEntity() != null)
-						EntityUtils.consume(response.getEntity());
-				} catch (Exception e) { e.printStackTrace(); }
+				if(!name.contains("SocketTimeoutException"))
+					print("[Exception - addToCart(productId, variant)] -> " + name);
 			}
-		}	
+		} finally {
+			if(request != null)
+				request.releaseConnection();
+			try {
+				if(response != null && response.getEntity() != null)
+					EntityUtils.consume(response.getEntity());
+			} catch (Exception e) { e.printStackTrace(); }
+		}
 		return false;
 	}
 	
-	public List<NameValuePair> generateCheckout(String variant, String token) {
+	public List<NameValuePair> generateCheckout(String variant) {
 		List<NameValuePair> data = new ArrayList<NameValuePair>();
 		
 		data.add(new BasicNameValuePair("store_credit_id", "1"));
@@ -435,7 +452,7 @@ public class Supreme implements Runnable  {
 		data.add(new BasicNameValuePair("order[terms]", "0"));
 		data.add(new BasicNameValuePair("order[terms]", "1"));
 		data.add(new BasicNameValuePair("is_from_ios_native", "1"));		
-		data.add(new BasicNameValuePair("g-recaptcha-response", token));
+		data.add(new BasicNameValuePair("g-recaptcha-response", token));	    	
 		
 		return data;
 	}
@@ -444,6 +461,8 @@ public class Supreme implements Runnable  {
 		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Supreme] " + text.toString());
 	}
 	
+	String token;
+	long tokenGrabTime = 0L;
 	boolean itemCarted;
 	long sleep;
 	CookieStore cookies;
