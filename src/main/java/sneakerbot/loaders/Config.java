@@ -8,15 +8,12 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
-import main.java.sneakerbot.loaders.Credentials.CredentialObject;
-import main.java.sneakerbot.loaders.Proxy.ProxyObject;
+import main.java.sneakerbot.Bot;
 
 public class Config {
 	
@@ -49,8 +46,9 @@ public class Config {
 	public static void create(String name) {
         ArrayList<ConfigObject> configs = new ArrayList<ConfigObject>();
         
-        configs.add(new ConfigObject("http://adidas.com/yeezy", true, new double[] {8, 8.5, 11, 12.5}, "CC 1", 10));
-        configs.add(new ConfigObject("http://adidas.com/yeezy", true, new double[] {6, 6.5, 9, 9.5}, "CC 2", 5));
+        configs.add(new ConfigObject(Bot.Task.ADIDAS, "BA8842", false, true, true, new double[] {8, 8.5, 11, 12.5}, "CC 1", 0));
+        configs.add(new ConfigObject(Bot.Task.SUPREME, "Leather Bones Jacket", "Thu, 23 Nov 2017 16:00:00 GMT", "CC 2", 0));
+        configs.add(new ConfigObject(Bot.Task.ACCOUNTCREATOR, 0));
         
 		try (FileWriter writer = new FileWriter(name)) {
 			new GsonBuilder().enableComplexMapKeySerialization()
@@ -61,21 +59,59 @@ public class Config {
 	
 	public static class ConfigObject {
 		
-		public ConfigObject(String link, boolean splash, double[] sizes, String payment, int tasks) {
+		public ConfigObject(Bot.Task taskType, String sku, boolean grabCaptcha, boolean splash, boolean manual, double[] sizes, String payment, int tasks) {
 			super();
-			this.link = link;
+			this.taskType = taskType;
+			this.sku = sku;
+			this.grabCaptcha = grabCaptcha;
 			this.splash = splash;
+			this.manual = manual;
 			this.sizes = sizes;
 			this.payment = payment;
 			this.tasks = tasks;
 		}
 		
-		public String getLink() {
-			return link;
+		public ConfigObject(Bot.Task taskType, String keyword, String releaseTime, String payment, int tasks) {
+			super();
+			this.taskType = taskType;
+			this.keyword = keyword;
+			this.releaseTime = releaseTime;
+			this.payment = payment;
+			this.tasks = tasks;	
+		}
+		
+		public ConfigObject(Bot.Task taskType, int tasks) {
+			this.taskType = taskType;	
+			this.tasks = tasks;	
+		}
+		
+		public Bot.Task getTaskType() {
+			return taskType;
+		}
+		
+		
+		public String getKeyword() {
+			return keyword;
+		}
+
+		public String getReleaseTime() {
+			return releaseTime;
+		}
+		
+		public String getSku() {
+			return sku;
+		}
+		
+		public boolean grabCaptcha() {
+			return grabCaptcha;
 		}
 		
 		public boolean isSplash() {
 			return splash;
+		}
+		
+		public boolean isManual() {
+			return manual;
 		}
 		
 		public double[] getSizes() {
@@ -92,13 +128,23 @@ public class Config {
 
 		@Override
 		public String toString() {
-			return "ConfigObject [link=" + link + ", splash=" + splash + ", sizes=" + Arrays.toString(sizes)
-					+ ", payment=" + payment + ", tasks=" + tasks + "]";
+			return "ConfigObject [taskType=" + taskType + ", keyword=" + keyword + ", releaseTime=" + releaseTime
+					+ ", sku=" + sku + ", grabCaptcha=" + grabCaptcha + ", splash=" + splash + ", manual=" + manual
+					+ ", sizes=" + Arrays.toString(sizes) + ", payment=" + payment + ", tasks=" + tasks + "]";
 		}
 
-		private String link;
+		private Bot.Task taskType;
+		//SUPREME
+		private String keyword;
+		private String releaseTime;
+		//ADIDAS
+		private String sku;
+		private boolean grabCaptcha;
 		private boolean splash;
+		private boolean manual;
 		private double[] sizes;
+		
+		
 		private String payment;
 		private int tasks;
 	}
