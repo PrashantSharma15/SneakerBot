@@ -1,30 +1,31 @@
 [
   {
-    "sku": "CG5107",
-    "captchaKey": "testKey",
+    "taskType": "ADIDAS",
+    "sku": "BY9587",
+	"sitekey": "6LdC0iQUAAAAAOYmRv34KSLDe-7DmQrUSYJH8eB_",
     "splash": false, // for yeezys
 	"manual": true,
     "sizes": [
       8.0,
       9.5,
       11.0,
-      12.5
+	  12.0,
+      12.5,
+	  13.0
     ],
     "payment": "CC 2",
     "tasks": 1
   },
   {
-    "sku": "CP9654",
-	"captchaKey": "testKey",
-    "splash": true,
-	"manual": false,
-    "sizes": [
-      6.0,
-      6.5,
-      9.0,
-      9.5
-    ],
+	"taskType": "SUPREME",
+    "keyword": "Leather Bones Jacket",
+	"releaseTime": "Fri, 24 Nov 2017 16:00:00 GMT",
+	"sitekey": "6LeWwRkUAAAAAOBsau7KpuC9AV-6J8mhw4AjC3Xz",
     "payment": "CC 2",
+    "tasks": 0
+  },
+  {
+	"taskType": "ACCOUNTCREATOR",
     "tasks": 0
   }
 ]

@@ -46,9 +46,10 @@ public class Config {
 	public static void create(String name) {
         ArrayList<ConfigObject> configs = new ArrayList<ConfigObject>();
         
-        configs.add(new ConfigObject(Bot.Task.ADIDAS, "BA8842", false, true, true, new double[] {8, 8.5, 11, 12.5}, "CC 1", 0));
+        configs.add(new ConfigObject(Bot.Task.ADIDAS, "BA8842", "sitekey-here", true, true, new double[] {8, 8.5, 11, 12.5}, "CC 1", 0));
         configs.add(new ConfigObject(Bot.Task.SUPREME, "Leather Bones Jacket", "Thu, 23 Nov 2017 16:00:00 GMT", "CC 2", 0));
         configs.add(new ConfigObject(Bot.Task.ACCOUNTCREATOR, 0));
+        configs.add(new ConfigObject(Bot.Task.SITEKEYGRABBER, 0));
         
 		try (FileWriter writer = new FileWriter(name)) {
 			new GsonBuilder().enableComplexMapKeySerialization()
@@ -59,11 +60,11 @@ public class Config {
 	
 	public static class ConfigObject {
 		
-		public ConfigObject(Bot.Task taskType, String sku, boolean grabCaptcha, boolean splash, boolean manual, double[] sizes, String payment, int tasks) {
+		public ConfigObject(Bot.Task taskType, String sku, String sitekey, boolean splash, boolean manual, double[] sizes, String payment, int tasks) {
 			super();
 			this.taskType = taskType;
 			this.sku = sku;
-			this.grabCaptcha = grabCaptcha;
+			this.sitekey = sitekey;
 			this.splash = splash;
 			this.manual = manual;
 			this.sizes = sizes;
@@ -102,8 +103,8 @@ public class Config {
 			return sku;
 		}
 		
-		public boolean grabCaptcha() {
-			return grabCaptcha;
+		public String getSiteKey() {
+			return sitekey;
 		}
 		
 		public boolean isSplash() {
@@ -129,7 +130,7 @@ public class Config {
 		@Override
 		public String toString() {
 			return "ConfigObject [taskType=" + taskType + ", keyword=" + keyword + ", releaseTime=" + releaseTime
-					+ ", sku=" + sku + ", grabCaptcha=" + grabCaptcha + ", splash=" + splash + ", manual=" + manual
+					+ ", sku=" + sku + ", sitekey=" + sitekey + ", splash=" + splash + ", manual=" + manual
 					+ ", sizes=" + Arrays.toString(sizes) + ", payment=" + payment + ", tasks=" + tasks + "]";
 		}
 
@@ -139,7 +140,7 @@ public class Config {
 		private String releaseTime;
 		//ADIDAS
 		private String sku;
-		private boolean grabCaptcha;
+		private String sitekey;
 		private boolean splash;
 		private boolean manual;
 		private double[] sizes;
