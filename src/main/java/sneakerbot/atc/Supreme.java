@@ -40,9 +40,6 @@ import main.java.sneakerbot.loaders.Proxy.ProxyObject;
 
 public class Supreme implements Runnable  {
 	
-	private String RELEASE_TIME = "Fri, 24 Nov 2017 16:00:00 GMT"; // change every release. Should be in config
-	private String keyword = "Leather Bones Jacket";
-	
 	public Supreme(ProxyObject proxy, CredentialObject credentials, ConfigObject config) {
 		super();	
 		
@@ -71,6 +68,8 @@ public class Supreme implements Runnable  {
 						.build())
 				.build();
 		
+		this.keyword = config.getKeyword();
+		this.release_time = config.getReleaseTime();
 		this.proxy = proxy;
 		this.credentials = credentials;
 		sleep = 0L;
@@ -79,6 +78,11 @@ public class Supreme implements Runnable  {
 	
 	@Override
 	public void run() {
+		if(keyword == null || release_time == null) {
+			print("keyword or release time is null.");
+			return;		
+		}
+			
 		int productId = getProductId(keyword);
 		
 		if(productId == -1) {
@@ -281,7 +285,7 @@ public class Supreme implements Runnable  {
 				}
 				
 				long currTime = ZonedDateTime.parse(response.getFirstHeader("Date").getValue(), DateTimeFormatter.RFC_1123_DATE_TIME).toEpochSecond();
-				long releaseTime = ZonedDateTime.parse(RELEASE_TIME, DateTimeFormatter.RFC_1123_DATE_TIME).toEpochSecond();
+				long releaseTime = ZonedDateTime.parse(release_time, DateTimeFormatter.RFC_1123_DATE_TIME).toEpochSecond();
 				
 				sleep = releaseTime - currTime; // Is this a thing?
 				
@@ -461,6 +465,8 @@ public class Supreme implements Runnable  {
 		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Supreme] " + text.toString());
 	}
 	
+	private String release_time;
+	private String keyword;
 	String token;
 	long tokenGrabTime = 0L;
 	boolean itemCarted;
