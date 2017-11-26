@@ -28,7 +28,6 @@ public class AdidasAccount {
                     String[] split = input.split(":");
                     String email = split[0];
                     String password = split[1];
-                    
                     accounts.add(new AccountObject(email, password));
                 }
             } catch (IOException e) {  e.printStackTrace(); } finally { in.close(); }

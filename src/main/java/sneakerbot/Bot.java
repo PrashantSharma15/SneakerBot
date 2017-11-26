@@ -21,6 +21,7 @@ import main.java.sneakerbot.loaders.Proxy;
 import main.java.sneakerbot.loaders.Proxy.ProxyObject;
 import main.java.sneakerbot.thread.ThreadPool;
 import main.java.sneakerbot.utils.AdidasAccountCreator;
+import main.java.sneakerbot.utils.PingTest;
 import main.java.sneakerbot.utils.SitekeyGrabber;
 
 public class Bot {
@@ -31,19 +32,23 @@ public class Bot {
 	    SHOPIFY,
 	    SUPREME,
 	    ACCOUNTCREATOR,
-	    SITEKEYGRABBER;
+	    SITEKEYGRABBER,
+		PINGTEST;
 	}
 	
 	static ThreadPool pool;
 	static ArrayList<AccountObject> accounts;
+	static int usedAccounts;
 	static ArrayList<ProxyObject> proxies;
 	static ArrayList<ProxyObject> usedProxies;
 	static Map<String, CredentialObject> credentials;
 	static ArrayList<ConfigObject> configs;
-	static int taskCount = 0;
+	static int taskCount;
 	public static List<CaptchaResponse> captchas;
 	
 	public static void init() {
+		taskCount = 0;
+		usedAccounts = 0;
 		accounts = AdidasAccount.load("data/accounts.txt");
 		proxies = Proxy.load("data/proxies.txt");
 		usedProxies = new ArrayList<ProxyObject>();
@@ -85,18 +90,20 @@ public class Bot {
 			
 			for (int start = 0; start < c.getTasks(); start++)  {
 				if(c.getTaskType() == Task.ADIDAS) {
-					pool.run(new Adidas(getRandomProxy(), creds, c, getRandomAccount()));
+					pool.run(new Adidas(getRandomProxy(), creds, c, getRandomAccount(), start));
 				} else if(c.getTaskType() == Task.SHOPIFY) {
 					pool.run(new Shopify("kith", getRandomProxy(), creds, c));
 				} else if(c.getTaskType() == Task.SUPREME) {
 					pool.run(new Supreme(getRandomProxy(), creds, c));				
+				} else if(c.getTaskType() == Task.PINGTEST) {
+					pool.run(new PingTest(getRandomProxy(),  c));			
 				}
 			}
 		});
 		
 
 		//print("Proxies loaded: " + (proxies.size() + inUse.size()) + "\nTasks loaded: " + taskCount + "\nPress Enter to start tasks.");
-		print("Accounts loaded: " + accounts.size());
+		print("Accounts loaded: " + (accounts.size() + usedAccounts));
 		print("Proxies loaded: " + (proxies.size() + usedProxies.size()));
 		print("Tasks loaded: " + taskCount);
 		print("Press Enter to start tasks.");
@@ -114,6 +121,7 @@ public class Bot {
 		if(count == 0)
 			return null; 
 		
+		usedAccounts++;
 		return accounts.remove(new Random().nextInt(count));
 	}
 	
@@ -134,7 +142,7 @@ public class Bot {
 
 	}
 	
-	public static void print(String text) {
-		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Bot] " + text);
+	public static void print(Object text) {
+		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Bot] " + text.toString());
 	}
 }

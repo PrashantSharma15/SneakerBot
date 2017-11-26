@@ -1,9 +1,9 @@
 [
   {
     "taskType": "ADIDAS",
-    "sku": "BY9587",
+    "sku": "AH2203",
 	"sitekey": "6LdC0iQUAAAAAOYmRv34KSLDe-7DmQrUSYJH8eB_",
-    "splash": false, // for yeezys
+    "splash": true, // for yeezys
 	"manual": true,
     "sizes": [
       8.0,
@@ -14,7 +14,7 @@
 	  13.0
     ],
     "payment": "CC 2",
-    "tasks": 1
+    "tasks": 25
   },
   {
 	"taskType": "SUPREME",
@@ -26,6 +26,10 @@
   },
   {
 	"taskType": "ACCOUNTCREATOR",
+    "tasks": 0
+  },
+  {
+	"taskType": "PINGTEST",
     "tasks": 0
   }
 ]
