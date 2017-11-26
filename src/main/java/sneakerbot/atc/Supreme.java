@@ -34,13 +34,14 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 
 import main.java.sneakerbot.Bot;
+import main.java.sneakerbot.captcha.Harvester.CaptchaResponse;
 import main.java.sneakerbot.loaders.Config.ConfigObject;
 import main.java.sneakerbot.loaders.Credentials.CredentialObject;
 import main.java.sneakerbot.loaders.Proxy.ProxyObject;
 
 public class Supreme implements Runnable  {
 	
-	public Supreme(ProxyObject proxy, CredentialObject credentials, ConfigObject config) {
+	public Supreme(int taskId, ConfigObject config, ProxyObject proxy, CredentialObject credentials) {
 		super();	
 		
 		BasicCredentialsProvider proxyCredentials = null;
@@ -68,6 +69,7 @@ public class Supreme implements Runnable  {
 						.build())
 				.build();
 		
+		this.taskId = taskId;
 		this.keyword = config.getKeyword();
 		this.release_time = config.getReleaseTime();
 		this.proxy = proxy;
@@ -122,19 +124,28 @@ public class Supreme implements Runnable  {
 		
 		tasks.add(() -> {		
 		    synchronized(this) {
-		    	if(Bot.captchas.size() >= 1) {
-		    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size())).getToken();
-		    		tokenGrabTime = System.currentTimeMillis();
-		    	}   	
+		    	while(token == null) {
+			    	if(Bot.captchas.size() >= 1) 
+			    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size()));
+			    	 else {
+			    		print("Please fill captcha bank.");
+			    		sleep(5000L);
+			    	}
+		    	} 		
 		    }
 
 		    while(!itemCarted && !Thread.interrupted()) {
-				if((System.currentTimeMillis() - tokenGrabTime) > 90000L && tokenGrabTime != 0L) { // grab new recaptcha token
+				if(token != null && token.isExpired()) { // grab new recaptcha token
+					token = null;
 				    synchronized(this) {
-				    	if(Bot.captchas.size() >= 1) {
-				    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size())).getToken();
-				    		tokenGrabTime = System.currentTimeMillis();
-				    	}   
+				    	while(token == null) {
+					    	if(Bot.captchas.size() >= 1) 
+					    		token = Bot.captchas.remove(new Random().nextInt(Bot.captchas.size()));
+					    	 else {
+					    		print("Please fill captcha bank.");
+					    		sleep(5000L);
+					    	}
+				    	}  
 				    }
 				}	    	
 		    }	    
@@ -150,14 +161,8 @@ public class Supreme implements Runnable  {
 			int minutes = (totalSecs % 3600) / 60;
 			int seconds = totalSecs % 60;
 			String timeString = String.format("%02d:%02d:%02d", hours, minutes, seconds);
-			
-			try {
-				print("Sleeping for " + timeString);
-				Thread.sleep((sleep * 1000L) - 5000L); // sleep til 5 seconds before release time :)
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}			
+			print("Sleeping for " + timeString);
+			sleep((sleep * 1000L) - 5000L); // sleep til 5 seconds before release time :)			
 		}
 
 		threads.stream().forEach(t -> { // start atc & checkout process
@@ -166,14 +171,9 @@ public class Supreme implements Runnable  {
 		});
 		
 	    synchronized(this) {
-			while(!itemCarted) { // check if any threads checked out.
-				try {
-					Thread.sleep(2500L);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
+			while(!itemCarted) // check if any threads checked out.
+				sleep(2500L);
+			
 	    }
 		
 		threads.stream().forEach(t -> { // stop threads if item checked out.
@@ -346,7 +346,7 @@ public class Supreme implements Runnable  {
 			} else 
 				print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
 				
-			Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
+			sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
 		} catch (Exception e ) {
 			if(DEBUG) 
 				e.printStackTrace();
@@ -405,7 +405,7 @@ public class Supreme implements Runnable  {
 			} else 
 				print("Status Code: " + response.getStatusLine().getStatusCode() + " Body: " + result.toString());
 				
-			Thread.sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
+			sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
 		} catch (Exception e ) {
 			if(DEBUG) 
 				e.printStackTrace();
@@ -456,20 +456,26 @@ public class Supreme implements Runnable  {
 		data.add(new BasicNameValuePair("order[terms]", "0"));
 		data.add(new BasicNameValuePair("order[terms]", "1"));
 		data.add(new BasicNameValuePair("is_from_ios_native", "1"));		
-		data.add(new BasicNameValuePair("g-recaptcha-response", token));	    	
+		data.add(new BasicNameValuePair("g-recaptcha-response", token.getToken()));	    	
 		
 		return data;
 	}
 
 	public void print(Object text) {
-		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Supreme] " + text.toString());
+		System.out.println("[" + new SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().getTime()) + "][Supreme->" + (proxy != null ? proxy.getAddress() + ":" + proxy.getPassword() : taskId) + "] " + text.toString());
 	}
 	
-	private String release_time;
-	private String keyword;
-	String token;
-	long tokenGrabTime = 0L;
+	public void sleep(long time) {
+		try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) { e.printStackTrace(); }
+	}
+	
+	String release_time;
+	String keyword;
+	CaptchaResponse token;
 	boolean itemCarted;
+	int taskId;
 	long sleep;
 	CookieStore cookies;
 	HttpClient client;
