@@ -75,7 +75,7 @@ public class Supreme implements Runnable  {
 		this.proxy = proxy;
 		this.credentials = credentials;
 		sleep = 0L;
-		DEBUG = true;
+		debug = true;
 	}
 	
 	@Override
@@ -223,7 +223,7 @@ public class Supreme implements Runnable  {
 				print("Product not found using keyword: " + keyword);
 				return -1;
 			} catch (Exception e ) {
-				if(DEBUG) 
+				if(debug) 
 					e.printStackTrace();
 				else {
 					String name = e.getClass().getName();
@@ -276,7 +276,7 @@ public class Supreme implements Runnable  {
 						JSONObject size = new JSONObject(sizeJson.toString());
 						
 						if(size.getInt("stock_level") > 0) {
-							if(DEBUG)
+							if(debug)
 								print("Adding size: " + size.getString("name") + " for color: " + item.getString("name") + ". sizeId: " + size.getInt("id"));
 							
 							variants.add(Integer.toString(size.getInt("id")));
@@ -290,7 +290,7 @@ public class Supreme implements Runnable  {
 				sleep = releaseTime - currTime; // Is this a thing?
 				
 			} catch (Exception e ) {
-				if(DEBUG) 
+				if(debug) 
 					e.printStackTrace();
 				else {
 					String name = e.getClass().getName();
@@ -348,7 +348,7 @@ public class Supreme implements Runnable  {
 				
 			sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
 		} catch (Exception e ) {
-			if(DEBUG) 
+			if(debug) 
 				e.printStackTrace();
 			else {
 				String name = e.getClass().getName();
@@ -407,7 +407,7 @@ public class Supreme implements Runnable  {
 				
 			sleep(new Random().nextInt((int) (3500L - 1500L) + 1) + 1500L); // sleep random time 1.5-3 secs
 		} catch (Exception e ) {
-			if(DEBUG) 
+			if(debug) 
 				e.printStackTrace();
 			else {
 				String name = e.getClass().getName();
@@ -481,7 +481,7 @@ public class Supreme implements Runnable  {
 	HttpClient client;
 	ProxyObject proxy;
 	CredentialObject credentials;
-	boolean DEBUG;
+	boolean debug;
 	
 	public enum CardType {
 

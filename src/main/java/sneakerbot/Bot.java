@@ -90,13 +90,13 @@ public class Bot {
 			
 			for (int start = 0; start < c.getTasks(); start++)  {
 				if(c.getTaskType() == Task.ADIDAS) {
-					pool.run(new Adidas(getRandomProxy(), creds, c, getRandomAccount(), start));
+					pool.run(new Adidas(start, c, getRandomProxy(), getRandomAccount(), creds));
 				} else if(c.getTaskType() == Task.SHOPIFY) {
 					pool.run(new Shopify("kith", getRandomProxy(), creds, c));
 				} else if(c.getTaskType() == Task.SUPREME) {
-					pool.run(new Supreme(getRandomProxy(), creds, c));				
+					pool.run(new Supreme(start, c, getRandomProxy(), creds));				
 				} else if(c.getTaskType() == Task.PINGTEST) {
-					pool.run(new PingTest(getRandomProxy(),  c));			
+					pool.run(new PingTest(c,  getRandomProxy()));			
 				}
 			}
 		});
